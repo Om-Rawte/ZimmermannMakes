@@ -189,6 +189,7 @@ async function loadTableAvailability() {
         const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to fetch table availability');
         const tables = await response.json();
+        if (!Array.isArray(tables)) throw new Error('Invalid response from server');
         if (tables.length === 0) {
             availabilityGrid.innerHTML = `
                 <div class="no-tables">
@@ -209,10 +210,10 @@ async function loadTableAvailability() {
     } catch (error) {
         console.error('Error loading table availability:', error);
         availabilityGrid.innerHTML = `
-            <div class="error-state">
+            <div class="error-message">
                 <i class="fas fa-exclamation-triangle"></i>
-                <h3>Unable to load table availability</h3>
-                <p>Please contact us directly for reservations</p>
+                <h3>Error loading table availability</h3>
+                <p>${error.message || 'Please try again later.'}</p>
             </div>
         `;
     }
