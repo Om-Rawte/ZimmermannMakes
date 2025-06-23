@@ -13,8 +13,7 @@ export default defineConfig({
         about: resolve(__dirname, 'about.html'),
         contact: resolve(__dirname, 'contact.html'),
         reservations: resolve(__dirname, 'reservations.html')
-      },
-      external: ['@supabase/supabase-js'],
+      }
     }
   },
   publicDir: 'public'
