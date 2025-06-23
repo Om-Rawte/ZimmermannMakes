@@ -87,7 +87,7 @@ exports.handler = async (event, context) => {
         };
     }
 
-    const path = event.path.replace('/.netlify/functions/api', '');
+    const path = event.path.replace('/.netlify/functions/api', '').replace('/api', '');
 
     try {
         switch (path) {
