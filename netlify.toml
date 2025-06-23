@@ -4,6 +4,11 @@
   command = "npm run build"
 
 [[redirects]]
+  from = "/api/tables"
+  to = "/.netlify/functions/tables"
+  status = 200
+
+[[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
   status = 200
