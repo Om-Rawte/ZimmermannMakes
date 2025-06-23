@@ -87,7 +87,7 @@ exports.handler = async (event, context) => {
         };
     }
 
-    const path = event.path.replace('/.netlify/functions/api', '');
+    const path = event.path.replace('/.netlify/functions/api', '').replace('/api', '');
 
     try {
         switch (path) {
@@ -97,6 +97,17 @@ exports.handler = async (event, context) => {
                         statusCode: 200,
                         headers,
                         body: JSON.stringify(recipes)
+                    };
+                }
+                if (event.httpMethod === 'POST') {
+                    const newRecipes = JSON.parse(event.body);
+                    // Here you would typically save to a database or file.
+                    // For now, just log and return success.
+                    console.log('Received recipes:', newRecipes);
+                    return {
+                        statusCode: 200,
+                        headers,
+                        body: JSON.stringify({ message: 'Recipes received', count: Array.isArray(newRecipes) ? newRecipes.length : 1 })
                     };
                 }
                 break;
