@@ -100,14 +100,29 @@ exports.handler = async (event, context) => {
                     };
                 }
                 if (event.httpMethod === 'POST') {
-                    const newRecipes = JSON.parse(event.body);
-                    // Here you would typically save to a database or file.
-                    // For now, just log and return success.
-                    console.log('Received recipes:', newRecipes);
+                    const receivedRecipes = JSON.parse(event.body);
+                    
+                    if (Array.isArray(receivedRecipes)) {
+                        receivedRecipes.forEach(newRecipe => {
+                            if (!newRecipe.id) return; // Skip if no ID
+                            const index = recipes.findIndex(r => r.id === newRecipe.id);
+
+                            if (index !== -1) {
+                                // Recipe exists, so update it
+                                recipes[index] = newRecipe;
+                                console.log(`Updated recipe: ${newRecipe.name}`);
+                            } else {
+                                // Recipe is new, so add it
+                                recipes.push(newRecipe);
+                                console.log(`Added new recipe: ${newRecipe.name}`);
+                            }
+                        });
+                    }
+
                     return {
                         statusCode: 200,
                         headers,
-                        body: JSON.stringify({ message: 'Recipes received', count: Array.isArray(newRecipes) ? newRecipes.length : 1 })
+                        body: JSON.stringify({ message: 'Recipes processed successfully', count: Array.isArray(receivedRecipes) ? receivedRecipes.length : 0 })
                     };
                 }
                 break;
