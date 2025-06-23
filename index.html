@@ -11,14 +11,14 @@
 </head>
 <body>
     <!-- Navigation -->
-    <nav class="navbar">
-        <div class="nav-container">
+    <nav class="navbar" aria-label="Main Navigation">
+        <div class="nav-container container">
             <div class="nav-logo">
                 <h1>Zimmermann Makes</h1>
             </div>
             <ul class="nav-menu">
                 <li class="nav-item">
-                    <a href="index.html" class="nav-link active">Home</a>
+                    <a href="index.html" class="nav-link active" aria-current="page">Home</a>
                 </li>
                 <li class="nav-item">
                     <a href="menu.html" class="nav-link">Menu</a>
@@ -33,7 +33,7 @@
                     <a href="reservations.html" class="nav-link">Reservations</a>
                 </li>
             </ul>
-            <div class="hamburger">
+            <div class="hamburger" aria-label="Open navigation menu" tabindex="0" role="button">
                 <span class="bar"></span>
                 <span class="bar"></span>
                 <span class="bar"></span>
@@ -47,8 +47,8 @@
             <h1 class="hero-title">Welcome to Zimmermann Makes</h1>
             <p class="hero-subtitle">Experience culinary excellence in every dish</p>
             <div class="hero-buttons">
-                <a href="menu.html" class="btn btn-primary">View Menu</a>
-                <a href="reservations.html" class="btn btn-secondary">Make Reservation</a>
+                <a href="menu.html" class="btn btn-primary" aria-label="View Menu">View Menu</a>
+                <a href="reservations.html" class="btn btn-secondary" aria-label="Make Reservation">Make Reservation</a>
             </div>
         </div>
         <div class="hero-overlay"></div>
@@ -104,7 +104,7 @@
     </section>
 
     <!-- Footer -->
-    <footer class="footer">
+    <footer class="footer" aria-label="Footer">
         <div class="container">
             <div class="footer-content">
                 <div class="footer-section">
@@ -113,8 +113,8 @@
                 </div>
                 <div class="footer-section">
                     <h4>Contact</h4>
-                    <p><i class="fas fa-phone"></i> +1 (555) 123-4567</p>
-                    <p><i class="fas fa-envelope"></i> info@zimmermannmakes.com</p>
+                    <p><i class="fas fa-phone" aria-hidden="true"></i> <span aria-label="Phone">+1 (555) 123-4567</span></p>
+                    <p><i class="fas fa-envelope" aria-hidden="true"></i> <span aria-label="Email">info@zimmermannmakes.com</span></p>
                 </div>
                 <div class="footer-section">
                     <h4>Hours</h4>
@@ -124,9 +124,9 @@
                 <div class="footer-section">
                     <h4>Follow Us</h4>
                     <div class="social-links">
-                        <a href="#"><i class="fab fa-facebook"></i></a>
-                        <a href="#"><i class="fab fa-instagram"></i></a>
-                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#" aria-label="Facebook"><i class="fab fa-facebook" aria-hidden="true"></i></a>
+                        <a href="#" aria-label="Instagram"><i class="fab fa-instagram" aria-hidden="true"></i></a>
+                        <a href="#" aria-label="Twitter"><i class="fab fa-twitter" aria-hidden="true"></i></a>
                     </div>
                 </div>
             </div>
