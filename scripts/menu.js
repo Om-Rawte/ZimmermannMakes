@@ -1,3 +1,5 @@
+import { supabase } from '../src/supabaseClient.js';
+
 // Menu page functionality
 let allRecipes = [];
 let filteredRecipes = [];
@@ -45,7 +47,7 @@ function setupEventListeners() {
     }
 }
 
-// Load menu from API
+// Load menu from Supabase
 async function loadMenu() {
     const menuGrid = document.getElementById('menuGrid');
     const loadingSpinner = document.getElementById('loadingSpinner');
@@ -59,13 +61,14 @@ async function loadMenu() {
         if (noResults) noResults.style.display = 'none';
         menuGrid.innerHTML = '';
 
-        // Fetch recipes
-        const response = await fetch('/api/recipes');
-        if (!response.ok) {
-            throw new Error('Failed to fetch recipes');
-        }
+        // Fetch recipes from Supabase
+        const { data, error } = await supabase
+            .from('recipes')
+            .select('*')
+            .eq('published', true);
+        if (error) throw error;
 
-        allRecipes = await response.json();
+        allRecipes = data || [];
         filteredRecipes = [...allRecipes];
 
         // Render menu
@@ -84,6 +87,14 @@ async function loadMenu() {
         if (loadingSpinner) loadingSpinner.style.display = 'none';
     }
 }
+
+// Subscribe to real-time updates for recipes
+supabase
+    .channel('public:recipes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'recipes' }, payload => {
+        loadMenu(); // re-fetch and re-render menu
+    })
+    .subscribe();
 
 // Render menu items
 function renderMenu() {
@@ -200,15 +211,11 @@ async function showRecipeModal(recipeId) {
         modal.style.display = 'block';
         document.body.style.overflow = 'hidden';
 
-        // Find recipe in current data or fetch from API
+        // Find recipe in current data
         let recipe = allRecipes.find(r => r.id === recipeId);
-        
         if (!recipe) {
-            const response = await fetch(`/api/recipes/${recipeId}`);
-            if (!response.ok) {
-                throw new Error('Recipe not found');
-            }
-            recipe = await response.json();
+            recipeDetail.innerHTML = `<div class='error-state'><h3>Recipe not found</h3></div>`;
+            return;
         }
 
         // Render recipe details
@@ -286,14 +293,7 @@ async function showRecipeModal(recipeId) {
         `;
 
     } catch (error) {
-        console.error('Error loading recipe details:', error);
-        recipeDetail.innerHTML = `
-            <div class="error-state">
-                <i class="fas fa-exclamation-triangle"></i>
-                <h3>Unable to load recipe details</h3>
-                <p>Please try again later</p>
-            </div>
-        `;
+        recipeDetail.innerHTML = `<div class='error-state'><h3>Error loading recipe</h3><p>${error.message}</p></div>`;
     }
 }
 

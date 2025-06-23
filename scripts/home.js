@@ -1,3 +1,5 @@
+import { supabase } from '../src/supabaseClient.js';
+
 // Home page functionality
 document.addEventListener('DOMContentLoaded', function() {
     loadSpecialDishes();
@@ -17,16 +19,15 @@ async function loadSpecialDishes() {
             </div>
         `;
 
-        // Fetch recipes from API
-        const response = await fetch('/api/recipes');
-        if (!response.ok) {
-            throw new Error('Failed to fetch recipes');
-        }
+        // Fetch recipes from Supabase
+        const { data, error } = await supabase
+            .from('recipes')
+            .select('*')
+            .eq('published', true);
+        if (error) throw error;
 
-        const recipes = await response.json();
-        
         // Get 3 random recipes for special dishes
-        const specialDishes = recipes
+        const specialDishes = (data || [])
             .sort(() => 0.5 - Math.random())
             .slice(0, 3);
 
@@ -43,33 +44,13 @@ async function loadSpecialDishes() {
 
         // Render special dishes
         specialDishesContainer.innerHTML = specialDishes.map(dish => `
-            <div class="dish-card" onclick="showRecipeDetails('${dish.id}')">
-                <div class="dish-image">
-                    ${dish.imageData ? 
-                        `<img src="data:image/jpeg;base64,${dish.imageData}" alt="${dish.name}" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-image\\'></i>'">` :
-                        `<i class="fas fa-image"></i>`
-                    }
-                </div>
-                <div class="dish-content">
-                    <h3 class="dish-title">${dish.name}</h3>
-                    <p class="dish-description">${dish.details.substring(0, 100)}${dish.details.length > 100 ? '...' : ''}</p>
-                    <div class="dish-meta">
-                        <span class="dish-category">${dish.category}</span>
-                        <span class="dish-price">${utils.formatPrice(dish.price)}</span>
-                    </div>
-                </div>
+            <div class="special-dish">
+                <h4>${dish.name}</h4>
+                <p>${dish.details}</p>
             </div>
         `).join('');
-
     } catch (error) {
-        console.error('Error loading special dishes:', error);
-        specialDishesContainer.innerHTML = `
-            <div class="error-state">
-                <i class="fas fa-exclamation-triangle"></i>
-                <h3>Unable to load special dishes</h3>
-                <p>Please try again later</p>
-            </div>
-        `;
+        specialDishesContainer.innerHTML = `<div class='error-state'><h3>Error loading specials</h3><p>${error.message}</p></div>`;
     }
 }
 

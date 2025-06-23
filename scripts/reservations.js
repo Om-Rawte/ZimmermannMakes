@@ -1,8 +1,17 @@
+import { supabase } from '../src/supabaseClient.js';
+
 // Reservations page functionality
 document.addEventListener('DOMContentLoaded', function() {
     setupReservationForm();
     setupLiveTableSelector();
     loadTableAvailability();
+    supabase
+        .channel('public:reservations')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations' }, payload => {
+            fetchReservations(); // re-fetch and re-render reservations
+        })
+        .subscribe();
+    fetchReservations();
 });
 
 // Setup reservation form
@@ -217,4 +226,18 @@ async function loadTableAvailability() {
             </div>
         `;
     }
+}
+
+// Fetch and render reservations from Supabase (add this if not present)
+async function fetchReservations() {
+    // Example: You may want to render these in a table or list
+    const { data, error } = await supabase
+        .from('reservations')
+        .select('*');
+    if (error) {
+        console.error('Error fetching reservations:', error);
+        return;
+    }
+    // TODO: Render reservations in your UI
+    // Example: renderReservations(data);
 } 
