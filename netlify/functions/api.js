@@ -62,15 +62,38 @@ const recipes = [
     }
 ];
 
-const tables = [
-    { id: '1', name: 'Table 1', sitzplaetze: 2, bereich: 'Window', status: 'Available' },
-    { id: '2', name: 'Table 2', sitzplaetze: 4, bereich: 'Window', status: 'Reserved' },
-    { id: '3', name: 'Table 3', sitzplaetze: 6, bereich: 'Garden', status: 'Occupied' },
-    { id: '4', name: 'Table 4', sitzplaetze: 2, bereich: 'Garden', status: 'Available' },
-    { id: '5', name: 'Table 5', sitzplaetze: 8, bereich: 'Private', status: 'Available' }
+// --- LIVE TABLE RESERVATION API ---
+
+let reservations = [];
+let tables = [
+    { id: 1, name: 'Table 1', capacity: 2 },
+    { id: 2, name: 'Table 2', capacity: 4 },
+    { id: 3, name: 'Table 3', capacity: 4 },
+    { id: 4, name: 'Table 4', capacity: 6 },
+    { id: 5, name: 'Table 5', capacity: 8 },
+    // Add more tables as needed
 ];
 
-exports.handler = async (event, context) => {
+function parseDateTime(date, time) {
+    return new Date(`${date}T${time}`);
+}
+
+function isConflict(tableId, date, time, durationMinutes = 120) {
+    const newStart = parseDateTime(date, time);
+    const newEnd = new Date(newStart.getTime() + durationMinutes * 60000);
+    return reservations.some(r => {
+        if (r.tableId !== tableId || r.status === 'cancelled') return false;
+        const rStart = parseDateTime(r.date, r.time);
+        const rEnd = new Date(rStart.getTime() + (r.durationMinutes || 120) * 60000);
+        return (newStart < rEnd && newEnd > rStart);
+    });
+}
+
+exports.handler = async function(event, context) {
+    const { httpMethod, path, queryStringParameters, body } = event;
+    // Normalize path for Netlify
+    const cleanPath = path.replace(/^.*\/api/, '');
+
     // Enable CORS
     const headers = {
         'Access-Control-Allow-Origin': '*',
@@ -79,7 +102,7 @@ exports.handler = async (event, context) => {
     };
 
     // Handle preflight requests
-    if (event.httpMethod === 'OPTIONS') {
+    if (httpMethod === 'OPTIONS') {
         return {
             statusCode: 200,
             headers,
@@ -87,20 +110,18 @@ exports.handler = async (event, context) => {
         };
     }
 
-    const path = event.path.replace('/.netlify/functions/api', '').replace('/api', '');
-
     try {
-        switch (path) {
+        switch (cleanPath) {
             case '/recipes':
-                if (event.httpMethod === 'GET') {
+                if (httpMethod === 'GET') {
                     return {
                         statusCode: 200,
                         headers,
                         body: JSON.stringify(recipes)
                     };
                 }
-                if (event.httpMethod === 'POST') {
-                    const receivedRecipes = JSON.parse(event.body);
+                if (httpMethod === 'POST') {
+                    const receivedRecipes = JSON.parse(body);
                     
                     if (Array.isArray(receivedRecipes)) {
                         receivedRecipes.forEach(newRecipe => {
@@ -127,9 +148,9 @@ exports.handler = async (event, context) => {
                 }
                 break;
 
-            case (path.match(/^\/recipes\/(.+)$/) || {}).input:
-                if (event.httpMethod === 'GET') {
-                    const recipeId = path.split('/')[2];
+            case (cleanPath.match(/^\/recipes\/(.+)$/) || {}).input:
+                if (httpMethod === 'GET') {
+                    const recipeId = cleanPath.split('/')[2];
                     const recipe = recipes.find(r => r.id === recipeId);
                     
                     if (!recipe) {
@@ -149,36 +170,106 @@ exports.handler = async (event, context) => {
                 break;
 
             case '/tables':
-                if (event.httpMethod === 'GET') {
+                if (httpMethod === 'GET') {
+                    const { date, time } = queryStringParameters;
+                    if (!date || !time) {
+                        return {
+                            statusCode: 400,
+                            body: JSON.stringify({ error: 'Missing date or time' })
+                        };
+                    }
+                    // For each table, check if it is available at the given date/time
+                    const availableTables = tables.map(table => {
+                        const conflict = isConflict(table.id, date, time);
+                        return { ...table, available: !conflict };
+                    });
                     return {
                         statusCode: 200,
                         headers,
-                        body: JSON.stringify(tables)
+                        body: JSON.stringify(availableTables)
                     };
+                }
+                if (httpMethod === 'POST') {
+                    let data;
+                    try {
+                        data = JSON.parse(body);
+                    } catch (e) {
+                        return { statusCode: 400, body: JSON.stringify({ error: 'Invalid JSON' }) };
+                    }
+                    const { name, capacity } = data;
+                    if (!name || !capacity) {
+                        return { statusCode: 400, body: JSON.stringify({ error: 'Missing name or capacity' }) };
+                    }
+                    const newTable = {
+                        id: tables.length > 0 ? Math.max(...tables.map(t => t.id)) + 1 : 1,
+                        name,
+                        capacity: parseInt(capacity, 10)
+                    };
+                    tables.push(newTable);
+                    return {
+                        statusCode: 201,
+                        body: JSON.stringify(newTable)
+                    };
+                }
+                if (httpMethod === 'DELETE') {
+                    const id = parseInt(cleanPath.split('/')[2], 10);
+                    const idx = tables.findIndex(t => t.id === id);
+                    if (idx === -1) {
+                        return { statusCode: 404, body: JSON.stringify({ error: 'Table not found' }) };
+                    }
+                    tables.splice(idx, 1);
+                    // Also remove any future reservations for this table
+                    reservations = reservations.filter(r => r.tableId !== id);
+                    return { statusCode: 204, body: '' };
                 }
                 break;
 
             case '/reservations':
-                if (event.httpMethod === 'POST') {
-                    const reservationData = JSON.parse(event.body);
-                    
-                    // Here you would typically save to a database
-                    console.log('New reservation:', reservationData);
-                    
+                if (httpMethod === 'GET') {
+                    return {
+                        statusCode: 200,
+                        headers,
+                        body: JSON.stringify(reservations)
+                    };
+                }
+                if (httpMethod === 'POST') {
+                    let data;
+                    try {
+                        data = JSON.parse(body);
+                    } catch (e) {
+                        return { statusCode: 400, body: JSON.stringify({ error: 'Invalid JSON' }) };
+                    }
+                    const { name, date, time, tableId, guests, occasion } = data;
+                    if (!name || !date || !time || !tableId || !guests) {
+                        return { statusCode: 400, body: JSON.stringify({ error: 'Missing required fields' }) };
+                    }
+                    if (isConflict(tableId, date, time)) {
+                        return { statusCode: 409, body: JSON.stringify({ error: 'Table already reserved for this time' }) };
+                    }
+                    const reservation = {
+                        id: Date.now().toString(),
+                        name,
+                        date,
+                        time,
+                        tableId,
+                        guests,
+                        occasion: occasion || '',
+                        status: 'active',
+                        createdAt: new Date().toISOString(),
+                        durationMinutes: 120 // default 2 hours
+                    };
+                    reservations.push(reservation);
                     return {
                         statusCode: 201,
                         headers,
-                        body: JSON.stringify({ 
-                            message: 'Reservation created successfully',
-                            id: Date.now().toString()
-                        })
+                        body: JSON.stringify(reservation)
                     };
                 }
                 break;
 
             case '/contact':
-                if (event.httpMethod === 'POST') {
-                    const contactData = JSON.parse(event.body);
+                if (httpMethod === 'POST') {
+                    const contactData = JSON.parse(body);
                     
                     // Here you would typically send an email or save to a database
                     console.log('New contact message:', contactData);
@@ -189,6 +280,15 @@ exports.handler = async (event, context) => {
                         body: JSON.stringify({ 
                             message: 'Message sent successfully'
                         })
+                    };
+                }
+                break;
+
+            case '/tables':
+                if (httpMethod === 'GET' && (!queryStringParameters.date || !queryStringParameters.time)) {
+                    return {
+                        statusCode: 200,
+                        body: JSON.stringify(tables)
                     };
                 }
                 break;
