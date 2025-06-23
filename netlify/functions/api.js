@@ -174,8 +174,9 @@ exports.handler = async function(event, context) {
                     const { date, time } = queryStringParameters;
                     if (!date || !time) {
                         return {
-                            statusCode: 400,
-                            body: JSON.stringify({ error: 'Missing date or time' })
+                            statusCode: 200,
+                            headers,
+                            body: JSON.stringify([])
                         };
                     }
                     // For each table, check if it is available at the given date/time
@@ -194,11 +195,11 @@ exports.handler = async function(event, context) {
                     try {
                         data = JSON.parse(body);
                     } catch (e) {
-                        return { statusCode: 400, body: JSON.stringify({ error: 'Invalid JSON' }) };
+                        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid JSON' }) };
                     }
                     const { name, capacity } = data;
                     if (!name || !capacity) {
-                        return { statusCode: 400, body: JSON.stringify({ error: 'Missing name or capacity' }) };
+                        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing name or capacity' }) };
                     }
                     const newTable = {
                         id: tables.length > 0 ? Math.max(...tables.map(t => t.id)) + 1 : 1,
@@ -208,6 +209,7 @@ exports.handler = async function(event, context) {
                     tables.push(newTable);
                     return {
                         statusCode: 201,
+                        headers,
                         body: JSON.stringify(newTable)
                     };
                 }
@@ -215,12 +217,12 @@ exports.handler = async function(event, context) {
                     const id = parseInt(cleanPath.split('/')[2], 10);
                     const idx = tables.findIndex(t => t.id === id);
                     if (idx === -1) {
-                        return { statusCode: 404, body: JSON.stringify({ error: 'Table not found' }) };
+                        return { statusCode: 404, headers, body: JSON.stringify({ error: 'Table not found' }) };
                     }
                     tables.splice(idx, 1);
                     // Also remove any future reservations for this table
                     reservations = reservations.filter(r => r.tableId !== id);
-                    return { statusCode: 204, body: '' };
+                    return { statusCode: 204, headers, body: '' };
                 }
                 break;
 
@@ -237,14 +239,14 @@ exports.handler = async function(event, context) {
                     try {
                         data = JSON.parse(body);
                     } catch (e) {
-                        return { statusCode: 400, body: JSON.stringify({ error: 'Invalid JSON' }) };
+                        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid JSON' }) };
                     }
                     const { name, date, time, tableId, guests, occasion } = data;
                     if (!name || !date || !time || !tableId || !guests) {
-                        return { statusCode: 400, body: JSON.stringify({ error: 'Missing required fields' }) };
+                        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing required fields' }) };
                     }
                     if (isConflict(tableId, date, time)) {
-                        return { statusCode: 409, body: JSON.stringify({ error: 'Table already reserved for this time' }) };
+                        return { statusCode: 409, headers, body: JSON.stringify({ error: 'Table already reserved for this time' }) };
                     }
                     const reservation = {
                         id: Date.now().toString(),
@@ -269,8 +271,12 @@ exports.handler = async function(event, context) {
 
             case '/contact':
                 if (httpMethod === 'POST') {
-                    const contactData = JSON.parse(body);
-                    
+                    let contactData;
+                    try {
+                        contactData = JSON.parse(body);
+                    } catch (e) {
+                        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid JSON' }) };
+                    }
                     // Here you would typically send an email or save to a database
                     console.log('New contact message:', contactData);
                     
