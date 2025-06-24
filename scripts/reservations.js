@@ -33,10 +33,11 @@ function setupLiveTableSelector() {
         tableSelect = document.createElement('select');
         tableSelect.name = 'tableId';
         tableSelect.required = true;
-        tableSelect.className = 'form-group';
+        tableSelect.className = 'form-group custom-select';
         tableSelect.innerHTML = '<option value="">Select Table</option>';
-        // Insert after guestsInput
         guestsInput.parentNode.insertAdjacentElement('afterend', tableSelect);
+    } else {
+        tableSelect.classList.add('custom-select');
     }
     async function updateTableOptions() {
         const date = dateInput.value;
@@ -44,7 +45,7 @@ function setupLiveTableSelector() {
         const guests = parseInt(guestsInput.value, 10);
         if (!date || !time || !guests) {
             tableSelect.innerHTML = '<option value="">Select Table</option>';
-            tableSelect.disabled = true;
+            tableSelect.disabled = false;
             return;
         }
         tableSelect.disabled = true;
@@ -55,7 +56,7 @@ function setupLiveTableSelector() {
             const available = tables.filter(t => t.available && t.capacity >= guests);
             if (available.length === 0) {
                 tableSelect.innerHTML = '<option value="">No tables available</option>';
-                tableSelect.disabled = true;
+                tableSelect.disabled = false;
             } else {
                 tableSelect.innerHTML = '<option value="">Select Table</option>' +
                     available.map(t => `<option value="${t.id}">${t.name} (${t.capacity} seats)</option>`).join('');
